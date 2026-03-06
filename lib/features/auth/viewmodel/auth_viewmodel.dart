@@ -19,7 +19,6 @@ class AuthViewModel
   AuthStatus _status = AuthStatus.idle;
   AuthStatus get status => _status;
 
-  /// Loading state for UI
   bool get isLoading =>
       _status ==
       AuthStatus.sendingOtp;
@@ -59,7 +58,6 @@ class AuthViewModel
           seconds: 60,
         ),
 
-        /// Auto verification (Android)
         verificationCompleted:
             (
               PhoneAuthCredential credential,
@@ -69,7 +67,6 @@ class AuthViewModel
               );
             },
 
-        /// Error
         verificationFailed:
             (
               FirebaseAuthException e,
@@ -77,7 +74,6 @@ class AuthViewModel
               debugPrint(
                 "Verification Failed: ${e.message}",
               );
-
               _errorMessage =
                   e.message ??
                   "OTP verification failed";
@@ -86,7 +82,6 @@ class AuthViewModel
               );
             },
 
-        /// OTP sent
         codeSent:
             (
               String verificationId,
@@ -98,7 +93,6 @@ class AuthViewModel
               );
             },
 
-        /// Auto retrieval timeout
         codeAutoRetrievalTimeout:
             (
               String verificationId,
@@ -112,7 +106,6 @@ class AuthViewModel
       debugPrint(
         "Error sending OTP: $e",
       );
-
       _errorMessage = "Something went wrong. Try again.";
       _setStatus(
         AuthStatus.error,
@@ -154,7 +147,6 @@ class AuthViewModel
           doc.data()!,
           doc.id,
         );
-
         notifyListeners();
       }
     } catch (
@@ -175,8 +167,19 @@ class AuthViewModel
   ) async {
     try {
       await _auth.signOut();
+
       _user = null;
       notifyListeners();
+
+      /// Navigate to login and clear stack
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil(
+        "/login",
+        (
+          route,
+        ) => false,
+      );
     } catch (
       e
     ) {
@@ -200,7 +203,7 @@ class AuthViewModel
           null)
         return;
 
-      /// delete firestore document
+      /// delete firestore user
       await _firestore
           .collection(
             "users",
@@ -213,13 +216,46 @@ class AuthViewModel
       /// delete firebase auth account
       await currentUser.delete();
 
+      /// sign out
+      await _auth.signOut();
+
       _user = null;
       notifyListeners();
+
+      /// Navigate to login screen
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil(
+        "login",
+        (
+          route,
+        ) => false,
+      );
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Account deleted successfully",
+          ),
+        ),
+      );
     } catch (
       e
     ) {
       debugPrint(
         "Delete account error: $e",
+      );
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Failed to delete account",
+          ),
+        ),
       );
     }
   }
